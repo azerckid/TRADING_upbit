@@ -2,6 +2,7 @@ import type { Route } from "./+types/_layout";
 import { useState } from "react";
 import { Link, useLocation } from "react-router";
 import { CRYPTO_MARKETS } from "~/constants";
+import { fetchMultipleCoinInfo } from "~/utils/coingecko-api";
 import {
   Sidebar,
   SidebarContent,
@@ -42,7 +43,34 @@ import {
 } from "~/components/ui/dropdown-menu";
 import { Avatar, AvatarFallback, AvatarImage } from "~/components/ui/avatar";
 
-export default function Layout() {
+export async function loader({ }: Route.LoaderArgs) {
+  try {
+    console.log("[Layout Loader] 코인 아이콘 정보를 가져오는 중...");
+
+    const coinIds = CRYPTO_MARKETS.map((crypto) => crypto.coinGeckoId);
+    console.log("[Layout Loader] CoinGecko API 호출 시작:", coinIds);
+
+    const coinIconMap = await fetchMultipleCoinInfo(coinIds);
+
+    console.log("[Layout Loader] CoinGecko API 응답 완료, 아이콘 개수:", coinIconMap.size);
+
+    // Map을 일반 객체로 변환하여 직렬화 가능하게 만듭니다
+    const coinIconObject: Record<string, { id: string; name: string; image: { small: string; large: string } }> = {};
+    for (const [coinId, coinInfo] of coinIconMap.entries()) {
+      coinIconObject[coinId] = coinInfo;
+      console.log(`[Layout Loader] 아이콘 정보 저장: ${coinId} ->`, coinInfo);
+    }
+
+    console.log("[Layout Loader] 변환된 아이콘 객체:", coinIconObject);
+
+    return { coinIconMap: coinIconObject };
+  } catch (error) {
+    console.error("[Layout Loader] CoinGecko API 호출 실패:", error);
+    return { coinIconMap: {} };
+  }
+}
+
+export default function Layout({ loaderData }: Route.ComponentProps) {
   const [openMenus, setOpenMenus] = useState<Set<string>>(new Set());
   const location = useLocation();
 
@@ -99,7 +127,30 @@ export default function Layout() {
                             asChild
                             className="flex-1"
                           >
-                            <Link to={`/crypto/${crypto.market}`}>
+                            <Link to={`/crypto/${crypto.market}`} className="flex items-center gap-2">
+                              {(() => {
+                                const coinIconInfo = loaderData.coinIconMap
+                                  ? loaderData.coinIconMap[crypto.coinGeckoId]
+                                  : null;
+                                const coinIconUrl = coinIconInfo?.image.small || null;
+
+                                console.log(`[Layout Component] 코인: ${crypto.name}, 아이콘 URL:`, coinIconUrl);
+
+                                return coinIconUrl ? (
+                                  <img
+                                    src={coinIconUrl}
+                                    alt={crypto.name}
+                                    className="h-4 w-4 rounded-full"
+                                    onError={(e) => {
+                                      console.error(`[Layout Component] 이미지 로드 실패: ${coinIconUrl}`);
+                                      e.currentTarget.style.display = "none";
+                                    }}
+                                    onLoad={() => {
+                                      console.log(`[Layout Component] 이미지 로드 성공: ${coinIconUrl}`);
+                                    }}
+                                  />
+                                ) : null;
+                              })()}
                               <span>{crypto.name}</span>
                             </Link>
                           </SidebarMenuButton>

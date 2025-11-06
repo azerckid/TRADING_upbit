@@ -1,6 +1,8 @@
 import type { Route } from "./+types/home";
 import { fetchCryptoPrices, formatPrice, formatChangeRate } from "~/utils/upbit-api";
 import { SidebarTrigger } from "~/components/ui/sidebar";
+import { CRYPTO_MARKETS } from "~/constants";
+import { fetchMultipleCoinInfo } from "~/utils/coingecko-api";
 import { useRevalidator } from "react-router";
 import { useEffect } from "react";
 import {
@@ -23,11 +25,42 @@ export function meta({ }: Route.MetaArgs) {
 
 export async function loader({ }: Route.LoaderArgs) {
   try {
-    const prices = await fetchCryptoPrices();
-    return { prices };
+    console.log("[Home Loader] 가격 정보와 코인 아이콘 정보를 가져오는 중...");
+
+    // 가격 정보와 코인 아이콘 정보를 병렬로 가져옵니다
+    const [prices, coinIconMap] = await Promise.all([
+      fetchCryptoPrices(),
+      (async () => {
+        try {
+          const coinIds = CRYPTO_MARKETS.map((crypto) => crypto.coinGeckoId);
+          console.log("[Home Loader] CoinGecko API 호출 시작:", coinIds);
+          const iconMap = await fetchMultipleCoinInfo(coinIds);
+          console.log("[Home Loader] CoinGecko API 응답 완료, 아이콘 개수:", iconMap.size);
+          return iconMap;
+        } catch (error) {
+          console.error("[Home Loader] CoinGecko API 호출 실패:", error);
+          return new Map();
+        }
+      })(),
+    ]);
+
+    console.log("[Home Loader] 모든 데이터 로드 완료");
+    console.log("[Home Loader] 가격 개수:", prices.length);
+    console.log("[Home Loader] 아이콘 맵 크기:", coinIconMap.size);
+
+    // Map을 일반 객체로 변환하여 직렬화 가능하게 만듭니다
+    const coinIconObject: Record<string, { id: string; name: string; image: { small: string; large: string } }> = {};
+    for (const [coinId, coinInfo] of coinIconMap.entries()) {
+      coinIconObject[coinId] = coinInfo;
+      console.log(`[Home Loader] 아이콘 정보 저장: ${coinId} ->`, coinInfo);
+    }
+
+    console.log("[Home Loader] 변환된 아이콘 객체:", coinIconObject);
+
+    return { prices, coinIconMap: coinIconObject };
   } catch (error) {
-    console.error("Failed to fetch crypto prices:", error);
-    return { prices: [], error: "암호화폐 가격을 불러오는데 실패했습니다." };
+    console.error("[Home Loader] 가격 정보 조회 실패:", error);
+    return { prices: [], coinIconMap: {}, error: "암호화폐 가격을 불러오는데 실패했습니다." };
   }
 }
 
@@ -76,7 +109,7 @@ export default function Home({ loaderData }: Route.ComponentProps) {
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead className="text-center">코인명</TableHead>
+                <TableHead className="text-left">코인명</TableHead>
                 <TableHead className="text-center">마켓</TableHead>
                 <TableHead className="text-right">현재가</TableHead>
                 <TableHead className="text-right">변동률</TableHead>
@@ -114,10 +147,36 @@ export default function Home({ loaderData }: Route.ComponentProps) {
                       ? "text-blue-500"
                       : "text-gray-500";
 
+                // 코인 아이콘 URL 가져오기
+                const cryptoInfo = CRYPTO_MARKETS.find((c) => c.market === price.market);
+                const coinIconMap = loaderData.coinIconMap as Record<string, { id: string; name: string; image: { small: string; large: string } }> | undefined;
+                const coinIconInfo = cryptoInfo && coinIconMap
+                  ? coinIconMap[cryptoInfo.coinGeckoId]
+                  : null;
+                const coinIconUrl = coinIconInfo?.image?.small || null;
+
+                console.log(`[Home Component] 코인: ${price.name}, 아이콘 URL:`, coinIconUrl);
+
                 return (
                   <TableRow key={price.market}>
-                    <TableCell className="text-center font-medium">
-                      {price.name}
+                    <TableCell className="text-left font-medium">
+                      <div className="flex items-center justify-start gap-2">
+                        {coinIconUrl && (
+                          <img
+                            src={coinIconUrl}
+                            alt={price.name}
+                            className="h-5 w-5 rounded-full"
+                            onError={(e) => {
+                              console.error(`[Home Component] 이미지 로드 실패: ${coinIconUrl}`);
+                              e.currentTarget.style.display = "none";
+                            }}
+                            onLoad={() => {
+                              console.log(`[Home Component] 이미지 로드 성공: ${coinIconUrl}`);
+                            }}
+                          />
+                        )}
+                        <span>{price.name}</span>
+                      </div>
                     </TableCell>
                     <TableCell className="text-center">{price.market}</TableCell>
                     <TableCell className="text-right">
