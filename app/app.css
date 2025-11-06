@@ -113,4 +113,15 @@ body {
     background-color: hsl(var(--background));
     color: hsl(var(--foreground));
   }
+  a,
+  button,
+  [role="button"],
+  [onclick] {
+    cursor: pointer;
+  }
+  a:disabled,
+  button:disabled,
+  [role="button"]:disabled {
+    cursor: not-allowed;
+  }
 }

@@ -109,20 +109,20 @@ export default function Home({ loaderData }: Route.ComponentProps) {
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead className="text-left">코인명</TableHead>
-                <TableHead className="text-center">마켓</TableHead>
-                <TableHead className="text-right">현재가</TableHead>
-                <TableHead className="text-right">변동률</TableHead>
+                <TableHead className="text-left bg-gray-100">코인명</TableHead>
+                <TableHead className="text-center bg-gray-100">마켓</TableHead>
+                <TableHead className="text-right bg-gray-100">현재가</TableHead>
+                <TableHead className="text-right bg-gray-100">변동률</TableHead>
                 {hasAnyAverageBuyPrice && (
-                  <TableHead className="text-right">매수평균가</TableHead>
+                  <TableHead className="text-right bg-gray-100">매수평균가</TableHead>
                 )}
                 {hasAnyProfitLoss && (
-                  <TableHead className="text-right">평가손익</TableHead>
+                  <TableHead className="text-right bg-gray-100">평가손익</TableHead>
                 )}
               </TableRow>
             </TableHeader>
             <TableBody>
-              {sortedPrices.map((price) => {
+              {sortedPrices.map((price, index) => {
                 const isRise = price.change === "RISE";
                 const isFall = price.change === "FALL";
                 const isEven = price.change === "EVEN";
@@ -157,8 +157,10 @@ export default function Home({ loaderData }: Route.ComponentProps) {
 
                 console.log(`[Home Component] 코인: ${price.name}, 아이콘 URL:`, coinIconUrl);
 
+                const isLastRow = index === sortedPrices.length - 1;
+
                 return (
-                  <TableRow key={price.market}>
+                  <TableRow key={price.market} className={isLastRow ? "border-b-2 border-gray-300" : ""}>
                     <TableCell className="text-left font-medium">
                       <div className="flex items-center justify-start gap-2">
                         {coinIconUrl && (
