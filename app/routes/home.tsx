@@ -3,6 +3,7 @@ import { fetchCryptoPrices, formatPrice, formatChangeRate } from "~/utils/upbit-
 import { SidebarTrigger } from "~/components/ui/sidebar";
 import { CRYPTO_MARKETS } from "~/constants";
 import { fetchMultipleCoinInfo } from "~/utils/coingecko-api";
+import { fetchFearGreedIndex } from "~/utils/fear-greed-api";
 import { useRevalidator } from "react-router";
 import { useEffect } from "react";
 import {
@@ -13,6 +14,8 @@ import {
   TableHeader,
   TableRow,
 } from "~/components/ui/table";
+import { Card, CardContent, CardHeader, CardTitle } from "~/components/ui/card";
+import { FearGreedGauge } from "~/components/fear-greed-gauge";
 import { ArrowUp, ArrowDown, Minus } from "lucide-react";
 import { cn } from "~/lib/utils";
 
@@ -27,8 +30,8 @@ export async function loader({ }: Route.LoaderArgs) {
   try {
     console.log("[Home Loader] 가격 정보와 코인 아이콘 정보를 가져오는 중...");
 
-    // 가격 정보와 코인 아이콘 정보를 병렬로 가져옵니다
-    const [prices, coinIconMap] = await Promise.all([
+    // 가격 정보, 코인 아이콘 정보, 공포 및 탐욕 지수를 병렬로 가져옵니다
+    const [prices, coinIconMap, fearGreedIndex] = await Promise.all([
       fetchCryptoPrices(),
       (async () => {
         try {
@@ -40,6 +43,17 @@ export async function loader({ }: Route.LoaderArgs) {
         } catch (error) {
           console.error("[Home Loader] CoinGecko API 호출 실패:", error);
           return new Map();
+        }
+      })(),
+      (async () => {
+        try {
+          console.log("[Home Loader] Fear & Greed Index API 호출 시작");
+          const index = await fetchFearGreedIndex();
+          console.log("[Home Loader] Fear & Greed Index API 응답 완료:", index);
+          return index;
+        } catch (error) {
+          console.error("[Home Loader] Fear & Greed Index API 호출 실패:", error);
+          return null;
         }
       })(),
     ]);
@@ -57,10 +71,10 @@ export async function loader({ }: Route.LoaderArgs) {
 
     console.log("[Home Loader] 변환된 아이콘 객체:", coinIconObject);
 
-    return { prices, coinIconMap: coinIconObject };
+    return { prices, coinIconMap: coinIconObject, fearGreedIndex };
   } catch (error) {
     console.error("[Home Loader] 가격 정보 조회 실패:", error);
-    return { prices: [], coinIconMap: {}, error: "암호화폐 가격을 불러오는데 실패했습니다." };
+    return { prices: [], coinIconMap: {}, fearGreedIndex: null, error: "암호화폐 가격을 불러오는데 실패했습니다." };
   }
 }
 
@@ -99,6 +113,26 @@ export default function Home({ loaderData }: Route.ComponentProps) {
       </div>
       {loaderData.error && (
         <div className="mt-4 text-red-500">{loaderData.error}</div>
+      )}
+      {loaderData.fearGreedIndex && (
+        <div className="mb-6 max-w-6xl">
+          <Card className="border-2">
+            <CardContent className="pt-6">
+              <div className="grid grid-cols-2 gap-4">
+                <div className="flex flex-col items-center gap-4">
+                  <h3 className="text-lg font-semibold text-center">공포 및 탐욕 지수 (Fear & Greed Index)</h3>
+                  <FearGreedGauge index={loaderData.fearGreedIndex} />
+                  <div className="text-sm text-muted-foreground text-center">
+                    {new Date(loaderData.fearGreedIndex.timestamp * 1000).toLocaleString("ko-KR")} 업데이트
+                  </div>
+                </div>
+                <div>
+                  <h3 className="text-lg font-semibold">ETF 유출 & 유입</h3>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
       )}
       {loaderData.prices.length === 0 ? (
         <div className="text-center py-8 text-muted-foreground">
