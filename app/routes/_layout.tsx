@@ -96,13 +96,14 @@ export default function Layout({ loaderData }: Route.ComponentProps) {
       <div className="flex h-screen w-full">
         <Sidebar>
           <SidebarHeader>
-            <div className="flex items-center gap-2 px-2 py-1.5">
-              <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary text-primary-foreground">
-                <TrendingUp className="h-4 w-4" />
-              </div>
+            <div className="flex items-center justify-center gap-4 px-2 py-1.5">
+              <img
+                src="https://upbit-web-dist.upbit.com/upbit-web/images/upbit_logo.35a5b2a.svg"
+                alt="업비트 로고"
+                className="h-4 w-auto object-contain"
+              />
               <div className="flex flex-col">
                 <span className="text-sm font-semibold">업비트 자동거래</span>
-                <span className="text-xs text-muted-foreground">Auto Trading</span>
               </div>
             </div>
           </SidebarHeader>
@@ -114,6 +115,11 @@ export default function Layout({ loaderData }: Route.ComponentProps) {
                   <SidebarMenuItem>
                     <SidebarMenuButton asChild isActive={location.pathname === "/"}>
                       <Link to="/">Total</Link>
+                    </SidebarMenuButton>
+                  </SidebarMenuItem>
+                  <SidebarMenuItem>
+                    <SidebarMenuButton asChild isActive={location.pathname === "/dashboard"}>
+                      <Link to="/dashboard">Dashboard</Link>
                     </SidebarMenuButton>
                   </SidebarMenuItem>
                   {CRYPTO_MARKETS.map((crypto) => {
