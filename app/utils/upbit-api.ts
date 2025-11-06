@@ -46,17 +46,25 @@ function generateJWTToken(queryParams: string): string {
 }
 
 /**
- * 업비트 계좌 조회 API에서 매수평균가를 가져옵니다
+ * 업비트 계좌 조회 API에서 매수평균가와 보유수량을 가져옵니다
  */
-async function fetchAverageBuyPrices(): Promise<Map<string, number>> {
+async function fetchAccountInfo(): Promise<{
+  avgBuyPriceMap: Map<string, number>;
+  balanceMap: Map<string, number>;
+  profitLossMap: Map<string, number>;
+}> {
   const accessKey = process.env.UPBIT_OPEN_API_ACCESS_KEY;
   const secretKey = process.env.UPBIT_OPEN_API_SECRET_KEY;
 
-  // API 키가 없으면 빈 Map 반환
-  if (!accessKey || !secretKey) {
-    console.warn("업비트 API 키가 설정되지 않아 매수평균가를 가져올 수 없습니다.");
-    return new Map();
-  }
+    // API 키가 없으면 빈 Map 반환
+    if (!accessKey || !secretKey) {
+      console.warn("업비트 API 키가 설정되지 않아 계좌 정보를 가져올 수 없습니다.");
+      return {
+        avgBuyPriceMap: new Map(),
+        balanceMap: new Map(),
+        profitLossMap: new Map(),
+      };
+    }
 
   try {
     const queryParams = "";
@@ -75,21 +83,58 @@ async function fetchAverageBuyPrices(): Promise<Map<string, number>> {
 
     const accounts: UpbitAccount[] = await response.json();
 
-    // Map 생성: currency -> avg_buy_price
+    // Map 생성: currency -> avg_buy_price, balance, profit_loss
     const avgBuyPriceMap = new Map<string, number>();
+    const balanceMap = new Map<string, number>();
+    const profitLossMap = new Map<string, number>();
 
     accounts.forEach((account) => {
-      if (account.currency && account.avg_buy_price && parseFloat(account.avg_buy_price) > 0) {
+      if (account.currency) {
         // KRW-BTC 형식으로 변환
         const market = `KRW-${account.currency}`;
-        avgBuyPriceMap.set(market, parseFloat(account.avg_buy_price));
+        
+        if (account.avg_buy_price && parseFloat(account.avg_buy_price) > 0) {
+          avgBuyPriceMap.set(market, parseFloat(account.avg_buy_price));
+        }
+        
+        if (account.balance && parseFloat(account.balance) > 0) {
+          balanceMap.set(market, parseFloat(account.balance));
+        }
+
+        // 업비트 API 응답에서 평가손익 관련 필드 확인
+        // 가능한 필드명: profit_loss, profit, loss, unrealized_profit, unrealized_loss 등
+        const possibleProfitLossFields = [
+          'profit_loss',
+          'profit',
+          'loss',
+          'unrealized_profit',
+          'unrealized_loss',
+          'evaluation_profit',
+          'evaluation_loss',
+        ];
+
+        for (const field of possibleProfitLossFields) {
+          if (account[field] !== undefined && account[field] !== null) {
+            const value = typeof account[field] === 'string' 
+              ? parseFloat(account[field] as string)
+              : Number(account[field]);
+            if (!isNaN(value)) {
+              profitLossMap.set(market, value);
+              break;
+            }
+          }
+        }
       }
     });
 
-    return avgBuyPriceMap;
+    return { avgBuyPriceMap, balanceMap, profitLossMap };
   } catch (error) {
-    console.error("매수평균가 조회 실패:", error);
-    return new Map();
+    console.error("계좌 정보 조회 실패:", error);
+    return {
+      avgBuyPriceMap: new Map(),
+      balanceMap: new Map(),
+      profitLossMap: new Map(),
+    };
   }
 }
 
@@ -101,10 +146,10 @@ export async function fetchCryptoPrices(): Promise<CryptoPrice[]> {
   const url = `${UPBIT_API_BASE_URL}/ticker?markets=${markets}`;
 
   try {
-    // 현재가 정보와 매수평균가를 병렬로 가져옵니다
-    const [tickersResponse, avgBuyPriceMap] = await Promise.all([
+    // 현재가 정보와 계좌 정보를 병렬로 가져옵니다
+    const [tickersResponse, accountInfo] = await Promise.all([
       fetch(url),
-      fetchAverageBuyPrices(),
+      fetchAccountInfo(),
     ]);
 
     if (!tickersResponse.ok) {
@@ -112,6 +157,7 @@ export async function fetchCryptoPrices(): Promise<CryptoPrice[]> {
     }
 
     const tickers: UpbitTicker[] = await tickersResponse.json();
+    const { avgBuyPriceMap, balanceMap, profitLossMap } = accountInfo;
 
     // 코인 정보와 매칭하여 변환
     return tickers.map((ticker) => {
@@ -119,6 +165,17 @@ export async function fetchCryptoPrices(): Promise<CryptoPrice[]> {
         (crypto) => crypto.market === ticker.market
       );
       const averageBuyPrice = avgBuyPriceMap.get(ticker.market);
+      const balance = balanceMap.get(ticker.market);
+      
+      // 업비트 API에서 제공하는 평가손익이 있으면 사용, 없으면 계산
+      let profitLoss = profitLossMap.get(ticker.market);
+      
+      // API에서 평가손익이 제공되지 않으면 계산
+      if (profitLoss === undefined && averageBuyPrice !== undefined && balance !== undefined) {
+        if (averageBuyPrice > 0 && balance > 0) {
+          profitLoss = (ticker.trade_price - averageBuyPrice) * balance;
+        }
+      }
 
       return {
         market: ticker.market,
@@ -130,6 +187,8 @@ export async function fetchCryptoPrices(): Promise<CryptoPrice[]> {
         tradeVolume: ticker.trade_volume,
         accTradePrice24h: ticker.acc_trade_price_24h,
         averageBuyPrice: averageBuyPrice,
+        balance: balance,
+        profitLoss: profitLoss,
       };
     });
   } catch (error) {

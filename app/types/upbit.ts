@@ -36,6 +36,8 @@ export interface UpbitAccount {
   avg_buy_price: string; // 매수평균가
   avg_buy_price_modified: boolean;
   unit_currency: string; // 예: "KRW"
+  // 업비트 API 응답에 추가 필드가 있을 수 있으므로 인덱스 시그니처 추가
+  [key: string]: unknown;
 }
 
 export interface CryptoPrice {
@@ -48,6 +50,8 @@ export interface CryptoPrice {
   tradeVolume: number;
   accTradePrice24h: number;
   averageBuyPrice?: number; // 내가 구매한 매수평균가 (선택사항)
+  balance?: number; // 보유수량 (선택사항)
+  profitLoss?: number; // 평가손익 (업비트 API에서 제공하는 경우)
 }
 
 
