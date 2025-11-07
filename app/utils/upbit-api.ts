@@ -52,6 +52,7 @@ async function fetchAccountInfo(): Promise<{
   avgBuyPriceMap: Map<string, number>;
   balanceMap: Map<string, number>;
   profitLossMap: Map<string, number>;
+  profitLossRateMap: Map<string, number>;
 }> {
   const accessKey = process.env.UPBIT_OPEN_API_ACCESS_KEY;
   const secretKey = process.env.UPBIT_OPEN_API_SECRET_KEY;
@@ -63,6 +64,7 @@ async function fetchAccountInfo(): Promise<{
         avgBuyPriceMap: new Map(),
         balanceMap: new Map(),
         profitLossMap: new Map(),
+        profitLossRateMap: new Map(),
       };
     }
 
@@ -83,10 +85,11 @@ async function fetchAccountInfo(): Promise<{
 
     const accounts: UpbitAccount[] = await response.json();
 
-    // Map 생성: currency -> avg_buy_price, balance, profit_loss
+    // Map 생성: currency -> avg_buy_price, balance, profit_loss, profit_loss_rate
     const avgBuyPriceMap = new Map<string, number>();
     const balanceMap = new Map<string, number>();
     const profitLossMap = new Map<string, number>();
+    const profitLossRateMap = new Map<string, number>();
 
     accounts.forEach((account) => {
       if (account.currency) {
@@ -124,16 +127,48 @@ async function fetchAccountInfo(): Promise<{
             }
           }
         }
+
+        // 업비트 API 응답에서 평가손익 % 관련 필드 확인
+        // 가능한 필드명: profit_loss_rate, yield_rate, return_rate, profit_rate, loss_rate 등
+        const possibleProfitLossRateFields = [
+          'profit_loss_rate',
+          'yield_rate',
+          'return_rate',
+          'profit_rate',
+          'loss_rate',
+          'evaluation_profit_rate',
+          'evaluation_loss_rate',
+          'rate',
+        ];
+
+        for (const field of possibleProfitLossRateFields) {
+          if (account[field] !== undefined && account[field] !== null) {
+            const value = typeof account[field] === 'string' 
+              ? parseFloat(account[field] as string)
+              : Number(account[field]);
+            if (!isNaN(value)) {
+              profitLossRateMap.set(market, value);
+              break;
+            }
+          }
+        }
+
+        // 디버깅: API 응답의 모든 필드 로깅 (처음 한 번만)
+        if (accounts.indexOf(account) === 0) {
+          console.log('[Upbit API] 계좌 정보 응답 필드:', Object.keys(account));
+          console.log('[Upbit API] 계좌 정보 전체 응답:', account);
+        }
       }
     });
 
-    return { avgBuyPriceMap, balanceMap, profitLossMap };
+    return { avgBuyPriceMap, balanceMap, profitLossMap, profitLossRateMap };
   } catch (error) {
     console.error("계좌 정보 조회 실패:", error);
     return {
       avgBuyPriceMap: new Map(),
       balanceMap: new Map(),
       profitLossMap: new Map(),
+      profitLossRateMap: new Map(),
     };
   }
 }
@@ -157,7 +192,7 @@ export async function fetchCryptoPrices(): Promise<CryptoPrice[]> {
     }
 
     const tickers: UpbitTicker[] = await tickersResponse.json();
-    const { avgBuyPriceMap, balanceMap, profitLossMap } = accountInfo;
+    const { avgBuyPriceMap, balanceMap, profitLossMap, profitLossRateMap } = accountInfo;
 
     // 코인 정보와 매칭하여 변환
     return tickers.map((ticker) => {
@@ -177,6 +212,19 @@ export async function fetchCryptoPrices(): Promise<CryptoPrice[]> {
         }
       }
 
+      // 업비트 API에서 제공하는 평가손익 %가 있으면 사용, 없으면 계산
+      let profitLossRate = profitLossRateMap.get(ticker.market);
+      
+      // API에서 평가손익 %가 제공되지 않으면 계산
+      if (profitLossRate === undefined && averageBuyPrice !== undefined && averageBuyPrice > 0) {
+        if (profitLoss !== undefined && profitLoss !== null) {
+          // 평가손익 % = (평가손익 / (매수평균가 × 보유수량)) × 100
+          // 또는 더 간단하게: (평가손익 / 매수평균가) × 100 (단위당)
+          // 또는: ((현재가 - 매수평균가) / 매수평균가) × 100
+          profitLossRate = ((ticker.trade_price - averageBuyPrice) / averageBuyPrice) * 100;
+        }
+      }
+
       return {
         market: ticker.market,
         name: cryptoInfo?.name || ticker.market,
@@ -189,6 +237,7 @@ export async function fetchCryptoPrices(): Promise<CryptoPrice[]> {
         averageBuyPrice: averageBuyPrice,
         balance: balance,
         profitLoss: profitLoss,
+        profitLossRate: profitLossRate,
       };
     });
   } catch (error) {

@@ -43,12 +43,12 @@ export function CryptoPriceTable({ price, exchangeRate }: CryptoPriceTableProps)
         <Table>
             <TableHeader>
                 <TableRow>
-                    <TableHead className="text-right">코인명</TableHead>
-                    <TableHead className="text-right">현재가 (원화)</TableHead>
-                    <TableHead className="text-right">현재가 (달러)</TableHead>
-                    <TableHead className="text-right">변동률</TableHead>
-                    {hasAverageBuyPrice && <TableHead className="text-right">매수평균가</TableHead>}
-                    {hasProfitLoss && <TableHead className="text-right">평가손익</TableHead>}
+                    <TableHead className="text-right bg-gray-100 dark:bg-gray-800 text-foreground">코인명</TableHead>
+                    <TableHead className="text-right bg-gray-100 dark:bg-gray-800 text-foreground">현재가 (원화)</TableHead>
+                    <TableHead className="text-right bg-gray-100 dark:bg-gray-800 text-foreground">현재가 (달러)</TableHead>
+                    <TableHead className="text-right bg-gray-100 dark:bg-gray-800 text-foreground">변동률</TableHead>
+                    {hasAverageBuyPrice && <TableHead className="text-right bg-gray-100 dark:bg-gray-800 text-foreground">매수평균가</TableHead>}
+                    {hasProfitLoss && <TableHead className="text-right bg-gray-100 dark:bg-gray-800 text-foreground">평가손익</TableHead>}
                 </TableRow>
             </TableHeader>
             <TableBody>

@@ -52,6 +52,7 @@ export interface CryptoPrice {
   averageBuyPrice?: number; // 내가 구매한 매수평균가 (선택사항)
   balance?: number; // 보유수량 (선택사항)
   profitLoss?: number; // 평가손익 (업비트 API에서 제공하는 경우)
+  profitLossRate?: number; // 평가손익 % (업비트 API에서 제공하는 경우, 또는 계산)
 }
 
 

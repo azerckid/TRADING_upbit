@@ -16,8 +16,6 @@
     "ui": "~/components/ui",
     "lib": "~/lib",
     "hooks": "~/hooks"
-  }
+  },
+  "iconLibrary": "lucide"
 }
-
-
-

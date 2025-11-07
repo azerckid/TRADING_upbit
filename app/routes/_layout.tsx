@@ -30,6 +30,8 @@ import {
   Bell,
   LogOut,
   ChevronsUpDown,
+  Moon,
+  Sun,
 } from "lucide-react";
 import { Outlet } from "react-router";
 import {
@@ -42,6 +44,7 @@ import {
   DropdownMenuTrigger,
 } from "~/components/ui/dropdown-menu";
 import { Avatar, AvatarFallback, AvatarImage } from "~/components/ui/avatar";
+import { useTheme } from "~/hooks/use-theme";
 
 export async function loader({ }: Route.LoaderArgs) {
   try {
@@ -55,13 +58,26 @@ export async function loader({ }: Route.LoaderArgs) {
     console.log("[Layout Loader] CoinGecko API 응답 완료, 아이콘 개수:", coinIconMap.size);
 
     // Map을 일반 객체로 변환하여 직렬화 가능하게 만듭니다
+    // coinGeckoId를 키로 사용하도록 매핑
     const coinIconObject: Record<string, { id: string; name: string; image: { small: string; large: string } }> = {};
-    for (const [coinId, coinInfo] of coinIconMap.entries()) {
-      coinIconObject[coinId] = coinInfo;
-      console.log(`[Layout Loader] 아이콘 정보 저장: ${coinId} ->`, coinInfo);
+    
+    // coinGeckoId와 coin.id를 매핑
+    for (const crypto of CRYPTO_MARKETS) {
+      // coinIconMap에서 coin.id로 찾기
+      const coinInfo = Array.from(coinIconMap.entries()).find(
+        ([coinId]) => coinId === crypto.coinGeckoId
+      )?.[1];
+      
+      if (coinInfo) {
+        coinIconObject[crypto.coinGeckoId] = coinInfo;
+        console.log(`[Layout Loader] 아이콘 정보 저장: ${crypto.coinGeckoId} ->`, coinInfo);
+      } else {
+        console.warn(`[Layout Loader] 아이콘 정보를 찾을 수 없습니다: ${crypto.coinGeckoId}`);
+      }
     }
 
     console.log("[Layout Loader] 변환된 아이콘 객체:", coinIconObject);
+    console.log("[Layout Loader] coinIconMap의 모든 키:", Array.from(coinIconMap.keys()));
 
     return { coinIconMap: coinIconObject };
   } catch (error) {
@@ -73,6 +89,7 @@ export async function loader({ }: Route.LoaderArgs) {
 export default function Layout({ loaderData }: Route.ComponentProps) {
   const [openMenus, setOpenMenus] = useState<Set<string>>(new Set());
   const location = useLocation();
+  const { theme, setTheme } = useTheme();
 
   function toggleMenu(market: string) {
     setOpenMenus((prev) => {
@@ -138,15 +155,16 @@ export default function Layout({ loaderData }: Route.ComponentProps) {
                                 const coinIconInfo = loaderData.coinIconMap
                                   ? loaderData.coinIconMap[crypto.coinGeckoId]
                                   : null;
-                                const coinIconUrl = coinIconInfo?.image.small || null;
+                                const coinIconUrl = coinIconInfo?.image?.small || null;
 
-                                console.log(`[Layout Component] 코인: ${crypto.name}, 아이콘 URL:`, coinIconUrl);
+                                console.log(`[Layout Component] 코인: ${crypto.name}, coinGeckoId: ${crypto.coinGeckoId}, 아이콘 정보:`, coinIconInfo, `아이콘 URL:`, coinIconUrl);
 
                                 return coinIconUrl ? (
                                   <img
                                     src={coinIconUrl}
                                     alt={crypto.name}
-                                    className="h-4 w-4 rounded-full"
+                                    className="h-5 w-5 rounded-full flex-shrink-0"
+                                    style={{ display: 'block' }}
                                     onError={(e) => {
                                       console.error(`[Layout Component] 이미지 로드 실패: ${coinIconUrl}`);
                                       e.currentTarget.style.display = "none";
@@ -258,6 +276,17 @@ export default function Layout({ loaderData }: Route.ComponentProps) {
                     <span>알림</span>
                   </DropdownMenuItem>
                 </DropdownMenuGroup>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem
+                  onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
+                >
+                  {theme === "dark" ? (
+                    <Sun className="mr-2 h-4 w-4" />
+                  ) : (
+                    <Moon className="mr-2 h-4 w-4" />
+                  )}
+                  <span>{theme === "dark" ? "라이트 모드" : "다크 모드"}</span>
+                </DropdownMenuItem>
                 <DropdownMenuSeparator />
                 <DropdownMenuItem>
                   <LogOut className="mr-2 h-4 w-4" />

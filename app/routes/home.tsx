@@ -154,15 +154,18 @@ export default function Home({ loaderData }: Route.ComponentProps) {
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead className="text-left bg-gray-100">코인명</TableHead>
-                <TableHead className="text-right bg-gray-100">현재가 (원화)</TableHead>
-                <TableHead className="text-right bg-gray-100">현재가 (달러)</TableHead>
-                <TableHead className="text-right bg-gray-100">변동률</TableHead>
+                <TableHead className="text-left bg-gray-100 dark:bg-gray-800 text-foreground">코인명</TableHead>
+                <TableHead className="text-right bg-gray-100 dark:bg-gray-800 text-foreground">현재가 (원화)</TableHead>
+                <TableHead className="text-right bg-gray-100 dark:bg-gray-800 text-foreground">현재가 (달러)</TableHead>
+                <TableHead className="text-right bg-gray-100 dark:bg-gray-800 text-foreground">변동률</TableHead>
                 {hasAnyAverageBuyPrice && (
-                  <TableHead className="text-right bg-gray-100">매수평균가</TableHead>
+                  <TableHead className="text-right bg-gray-100 dark:bg-gray-800 text-foreground">매수평균가</TableHead>
                 )}
                 {hasAnyProfitLoss && (
-                  <TableHead className="text-right bg-gray-100">평가손익</TableHead>
+                  <>
+                    <TableHead className="text-right bg-gray-100 dark:bg-gray-800 text-foreground">평가손익</TableHead>
+                    <TableHead className="text-right bg-gray-100 dark:bg-gray-800 text-foreground">평가손익 (%)</TableHead>
+                  </>
                 )}
               </TableRow>
             </TableHeader>
@@ -255,15 +258,26 @@ export default function Home({ loaderData }: Route.ComponentProps) {
                       </TableCell>
                     )}
                     {hasAnyProfitLoss && (
-                      <TableCell className="text-right">
-                        {hasProfitLoss ? (
-                          <span className={cn("font-semibold", profitLossColorClass)}>
-                            {formatPrice(profitLoss)}
-                          </span>
-                        ) : (
-                          "-"
-                        )}
-                      </TableCell>
+                      <>
+                        <TableCell className="text-right">
+                          {hasProfitLoss ? (
+                            <span className={cn("font-semibold", profitLossColorClass)}>
+                              {formatPrice(profitLoss)}
+                            </span>
+                          ) : (
+                            "-"
+                          )}
+                        </TableCell>
+                        <TableCell className="text-right">
+                          {price.profitLossRate !== undefined && price.profitLossRate !== null ? (
+                            <span className={cn("font-semibold", profitLossColorClass)}>
+                              {price.profitLossRate >= 0 ? "+" : ""}{price.profitLossRate.toFixed(2)}%
+                            </span>
+                          ) : (
+                            "-"
+                          )}
+                        </TableCell>
+                      </>
                     )}
                   </TableRow>
                 );
