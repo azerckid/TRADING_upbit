@@ -1,6 +1,6 @@
 import { cn } from "~/lib/utils";
 import type { FearGreedIndex } from "~/utils/fear-greed-api";
-import { getFearGreedKoreanDescription, getFearGreedColorClass } from "~/utils/fear-greed-api";
+import { getFearGreedKoreanDescription, getFearGreedFillColorClass, getFearGreedSegments, getFearGreedHexColor } from "~/utils/fear-greed-api";
 
 interface FearGreedGaugeProps {
   index: FearGreedIndex;
@@ -25,14 +25,8 @@ export function FearGreedGauge({ index, className }: FearGreedGaugeProps) {
   // 0 = 0도 (왼쪽, 탐욕), 100 = 180도 (오른쪽, 공포)
   const angle = (value / 100) * 180;
 
-  // 5개 구간의 색상 (왼쪽에서 오른쪽으로: 초록 -> 연두 -> 노랑 -> 주황 -> 빨강)
-  const segments = [
-    { start: 0, end: 36, color: "#ef4444" },         // 극단적 탐욕 (0-20)
-    { start: 36, end: 72, color: "#f97316" },        // 탐욕 (20-40)
-    { start: 72, end: 108, color: "#eab308" },       // 중립 (40-60)
-    { start: 108, end: 144, color: "#84cc16" },      // 공포 (60-80)
-    { start: 144, end: 180, color: "#22c55e" },      // 극단적 공포 (80-100)
-  ];
+  // 5개 구간의 색상 (fear-greed-api.ts의 함수 사용)
+  const segments = getFearGreedSegments();
 
   // 각 구간의 경로 생성 (반원형, 왼쪽에서 오른쪽으로)
   // 반원형 게이지: 중심이 아래쪽 중앙에 있고, 왼쪽(0도)에서 오른쪽(180도)로 위쪽 반원을 그림
@@ -62,10 +56,8 @@ export function FearGreedGauge({ index, className }: FearGreedGaugeProps) {
   const indicatorX = centerX + radius * Math.cos(indicatorRad);
   const indicatorY = centerY - radius * Math.sin(indicatorRad);
 
-  // 현재 값에 해당하는 색상 찾기 (각도 기반)
-  const currentColor = segments.find((seg) => {
-    return angle >= seg.start && angle <= seg.end;
-  })?.color || segments[0].color;
+  // 현재 값에 해당하는 색상 찾기 (fear-greed-api.ts의 함수 사용)
+  const currentColor = getFearGreedHexColor(value);
 
   return (
     <div className={cn("flex flex-col items-center", className)}>
@@ -138,7 +130,7 @@ export function FearGreedGauge({ index, className }: FearGreedGaugeProps) {
           x={centerX}
           y={centerY - radius + 80}
           textAnchor="middle"
-          className="text-5xl font-bold fill-foreground"
+          className={cn("text-5xl font-bold", getFearGreedFillColorClass(value))}
           style={{ fontSize: '48px', fontWeight: 'bold' }}
         >
           {value}
@@ -147,7 +139,7 @@ export function FearGreedGauge({ index, className }: FearGreedGaugeProps) {
           x={centerX}
           y={centerY - radius + 105}
           textAnchor="middle"
-          className="text-xl font-semibold fill-foreground"
+          className={cn("text-xl font-semibold", getFearGreedFillColorClass(value))}
           style={{ fontSize: '20px', fontWeight: '600' }}
         >
           {getFearGreedKoreanDescription(valueClassification)}

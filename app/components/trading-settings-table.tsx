@@ -15,7 +15,9 @@ interface TradingSetting {
   id: string;
   intervalType: "hours" | "minutes";
   intervalValue: string;
-  percentBelow: string;
+  // 판매/구매 설정에 따라 다른 필드가 올 수 있음
+  percentBelow?: string; // 구매 설정용 (하위 호환성)
+  percentValue?: string; // 판매 설정용 (+5 또는 -5 형식)
 }
 
 interface TradingSettingsTableProps<T extends TradingSetting> {
@@ -68,7 +70,11 @@ export function TradingSettingsTable<T extends TradingSetting>({
               </TableCell>
               <TableCell>{renderThirdColumn(setting)}</TableCell>
               <TableCell>
-                {setting.percentBelow ? `${setting.percentBelow}%` : "-"}
+                {setting.percentValue
+                  ? `${setting.percentValue}%`
+                  : setting.percentBelow
+                    ? `${setting.percentBelow}%`
+                    : "-"}
               </TableCell>
               <TableCell>
                 <Button

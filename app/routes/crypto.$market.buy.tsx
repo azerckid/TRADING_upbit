@@ -71,7 +71,7 @@ interface BuySetting {
   intervalType: "hours" | "minutes";
   intervalValue: string;
   amount: string;
-  percentBelow: string;
+  percentValue: string; // +5 또는 -5 형식
 }
 
 export default function CryptoBuy({ loaderData, params }: Route.ComponentProps) {
@@ -87,7 +87,7 @@ export default function CryptoBuy({ loaderData, params }: Route.ComponentProps) 
       intervalType: "hours",
       intervalValue: "",
       amount: "",
-      percentBelow: "",
+      percentValue: "",
     };
     setBuySettings([...buySettings, newSetting]);
   };
@@ -225,20 +225,24 @@ export default function CryptoBuy({ loaderData, params }: Route.ComponentProps) 
 
                     <div className="space-y-2">
                       <label className="text-sm font-medium">
-                        매수평균가 대비 몇 % 낮을 때 구매
+                        매수평균가 대비 구매 조건 (%)
                       </label>
                       <Input
-                        type="number"
-                        step="0.1"
-                        min="0"
-                        placeholder="0.0"
-                        value={setting.percentBelow}
-                        onChange={(e) =>
-                          updateBuySetting(setting.id, "percentBelow", e.target.value)
-                        }
+                        type="text"
+                        placeholder="+5 또는 -5"
+                        value={setting.percentValue}
+                        onChange={(e) => {
+                          let value = e.target.value;
+                          // + 또는 -로 시작하도록 허용
+                          if (value && !value.match(/^[+-]?\d*\.?\d*$/)) {
+                            return;
+                          }
+                          updateBuySetting(setting.id, "percentValue", value);
+                        }}
                       />
                       <p className="text-xs text-muted-foreground">
-                        예: 5% 입력 시 매수평균가보다 5% 낮을 때 구매
+                        예: +5 입력 시 +5% 미만(+4%, +3%, 0%, -5%...)일 때 구매, +5% 이상(+6%, +7%...)은 구매하지 않음 (구매 상한선)<br />
+                        -5 입력 시 -5% 이하(-6%, -7%...)일 때 구매, -5% 이상(-4%, -3%, 0%, +5%...)은 구매하지 않음 (손실 구매선)
                       </p>
                     </div>
                   </div>

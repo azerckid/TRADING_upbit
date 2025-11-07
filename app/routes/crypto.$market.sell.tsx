@@ -71,7 +71,7 @@ interface SellSetting {
   intervalType: "hours" | "minutes";
   intervalValue: string;
   coinQuantity: string;
-  percentBelow: string;
+  percentValue: string; // +5 또는 -5 형식
 }
 
 export default function CryptoSell({ loaderData, params }: Route.ComponentProps) {
@@ -87,7 +87,7 @@ export default function CryptoSell({ loaderData, params }: Route.ComponentProps)
       intervalType: "hours",
       intervalValue: "",
       coinQuantity: "",
-      percentBelow: "",
+      percentValue: "",
     };
     setSellSettings([...sellSettings, newSetting]);
   };
@@ -223,20 +223,24 @@ export default function CryptoSell({ loaderData, params }: Route.ComponentProps)
 
                     <div className="space-y-2">
                       <label className="text-sm font-medium">
-                        매수평균가 대비 몇 % 높을 때 판매
+                        매수평균가 대비 판매 조건 (%)
                       </label>
                       <Input
-                        type="number"
-                        step="0.1"
-                        min="0"
-                        placeholder="0.0"
-                        value={setting.percentBelow}
-                        onChange={(e) =>
-                          updateSellSetting(setting.id, "percentBelow", e.target.value)
-                        }
+                        type="text"
+                        placeholder="+5 또는 -5"
+                        value={setting.percentValue}
+                        onChange={(e) => {
+                          let value = e.target.value;
+                          // + 또는 -로 시작하도록 허용
+                          if (value && !value.match(/^[+-]?\d*\.?\d*$/)) {
+                            return;
+                          }
+                          updateSellSetting(setting.id, "percentValue", value);
+                        }}
                       />
                       <p className="text-xs text-muted-foreground">
-                        예: 5% 입력 시 매수평균가보다 5% 높을 때 판매
+                        예: +5 입력 시 +5% 이상(+6%, +7%...)일 때 판매, +5% 미만(+4%, +3%...)은 판매하지 않음 (이익 실현선)<br />
+                        -5 입력 시 -5% 이상(-4%, -3%, 0%, +5%...)일 때 판매, -5% 이하(-6%, -7%...)는 팔지 않음 (손실 제한선)
                       </p>
                     </div>
                   </div>
