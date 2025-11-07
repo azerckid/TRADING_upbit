@@ -8,17 +8,9 @@ import {
   TableHeader,
   TableRow,
 } from "~/components/ui/table";
+import type { TradingSetting } from "~/types/trading";
 
 import type React from "react";
-
-interface TradingSetting {
-  id: string;
-  intervalType: "hours" | "minutes";
-  intervalValue: string;
-  // 판매/구매 설정에 따라 다른 필드가 올 수 있음
-  percentBelow?: string; // 구매 설정용 (하위 호환성)
-  percentValue?: string; // 판매 설정용 (+5 또는 -5 형식)
-}
 
 interface TradingSettingsTableProps<T extends TradingSetting> {
   settings: T[];

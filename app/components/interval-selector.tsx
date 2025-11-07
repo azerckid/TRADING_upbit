@@ -6,11 +6,12 @@ import {
   SelectTrigger,
   SelectValue,
 } from "~/components/ui/select";
+import type { IntervalType } from "~/types/trading";
 
 interface IntervalSelectorProps {
-  intervalType: "hours" | "minutes";
+  intervalType: IntervalType;
   intervalValue: string;
-  onIntervalTypeChange: (value: "hours" | "minutes") => void;
+  onIntervalTypeChange: (value: IntervalType) => void;
   onIntervalValueChange: (value: string) => void;
 }
 

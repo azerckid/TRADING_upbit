@@ -8,6 +8,7 @@ import { useState } from "react";
 import { Trash2, Plus } from "lucide-react";
 import { Form, useActionData } from "react-router";
 import { convertToCron } from "~/utils/cron";
+import type { BuySetting } from "~/types/trading";
 import { IntervalSelector } from "~/components/interval-selector";
 import { TradingSettingsTable } from "~/components/trading-settings-table";
 
@@ -64,14 +65,6 @@ export async function action({ request, params }: Route.ActionArgs) {
     console.error("구매 설정 저장 실패:", error);
     return { error: "구매 설정 저장에 실패했습니다." };
   }
-}
-
-interface BuySetting {
-  id: string;
-  intervalType: "hours" | "minutes";
-  intervalValue: string;
-  amount: string;
-  percentValue: string; // +5 또는 -5 형식
 }
 
 export default function CryptoBuy({ loaderData, params }: Route.ComponentProps) {
