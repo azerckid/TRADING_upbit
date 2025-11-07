@@ -1,5 +1,5 @@
 import type { Route } from "./+types/home";
-import { fetchCryptoPrices, formatPrice, formatChangeRate } from "~/utils/upbit-api";
+import { fetchCryptoPrices, formatPrice, formatChangeRate, getExchangeRate, convertKRWToUSD, formatPriceUSD } from "~/utils/upbit-api";
 import { SidebarTrigger } from "~/components/ui/sidebar";
 import { CRYPTO_MARKETS } from "~/constants";
 import { fetchMultipleCoinInfo } from "~/utils/coingecko-api";
@@ -30,8 +30,8 @@ export async function loader({ }: Route.LoaderArgs) {
   try {
     console.log("[Home Loader] 가격 정보와 코인 아이콘 정보를 가져오는 중...");
 
-    // 가격 정보, 코인 아이콘 정보, 공포 및 탐욕 지수를 병렬로 가져옵니다
-    const [prices, coinIconMap, fearGreedIndex] = await Promise.all([
+    // 가격 정보, 코인 아이콘 정보, 공포 및 탐욕 지수, 환율을 병렬로 가져옵니다
+    const [prices, coinIconMap, fearGreedIndex, exchangeRate] = await Promise.all([
       fetchCryptoPrices(),
       (async () => {
         try {
@@ -56,6 +56,17 @@ export async function loader({ }: Route.LoaderArgs) {
           return null;
         }
       })(),
+      (async () => {
+        try {
+          console.log("[Home Loader] 환율 API 호출 시작");
+          const rate = await getExchangeRate();
+          console.log("[Home Loader] 환율 API 응답 완료:", rate);
+          return rate;
+        } catch (error) {
+          console.error("[Home Loader] 환율 API 호출 실패:", error);
+          return 1300; // 기본값
+        }
+      })(),
     ]);
 
     console.log("[Home Loader] 모든 데이터 로드 완료");
@@ -71,10 +82,10 @@ export async function loader({ }: Route.LoaderArgs) {
 
     console.log("[Home Loader] 변환된 아이콘 객체:", coinIconObject);
 
-    return { prices, coinIconMap: coinIconObject, fearGreedIndex };
+    return { prices, coinIconMap: coinIconObject, fearGreedIndex, exchangeRate };
   } catch (error) {
     console.error("[Home Loader] 가격 정보 조회 실패:", error);
-    return { prices: [], coinIconMap: {}, fearGreedIndex: null, error: "암호화폐 가격을 불러오는데 실패했습니다." };
+    return { prices: [], coinIconMap: {}, fearGreedIndex: null, exchangeRate: 1300, error: "암호화폐 가격을 불러오는데 실패했습니다." };
   }
 }
 
@@ -144,8 +155,8 @@ export default function Home({ loaderData }: Route.ComponentProps) {
             <TableHeader>
               <TableRow>
                 <TableHead className="text-left bg-gray-100">코인명</TableHead>
-                <TableHead className="text-center bg-gray-100">마켓</TableHead>
-                <TableHead className="text-right bg-gray-100">현재가</TableHead>
+                <TableHead className="text-right bg-gray-100">현재가 (원화)</TableHead>
+                <TableHead className="text-right bg-gray-100">현재가 (달러)</TableHead>
                 <TableHead className="text-right bg-gray-100">변동률</TableHead>
                 {hasAnyAverageBuyPrice && (
                   <TableHead className="text-right bg-gray-100">매수평균가</TableHead>
@@ -214,9 +225,11 @@ export default function Home({ loaderData }: Route.ComponentProps) {
                         <span>{price.name}</span>
                       </div>
                     </TableCell>
-                    <TableCell className="text-center">{price.market}</TableCell>
                     <TableCell className="text-right">
                       {formatPrice(price.price)}
+                    </TableCell>
+                    <TableCell className="text-right">
+                      {formatPriceUSD(convertKRWToUSD(price.price, loaderData.exchangeRate))}
                     </TableCell>
                     <TableCell className="text-right">
                       <div

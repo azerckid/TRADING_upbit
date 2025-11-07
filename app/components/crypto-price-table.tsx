@@ -1,5 +1,5 @@
 import type { CryptoPrice } from "~/types/upbit";
-import { formatPrice, formatChangeRate } from "~/utils/upbit-api";
+import { formatPrice, formatChangeRate, convertKRWToUSD, formatPriceUSD } from "~/utils/upbit-api";
 import {
     Table,
     TableBody,
@@ -13,9 +13,10 @@ import { cn } from "~/lib/utils";
 
 interface CryptoPriceTableProps {
     price: CryptoPrice;
+    exchangeRate: number;
 }
 
-export function CryptoPriceTable({ price }: CryptoPriceTableProps) {
+export function CryptoPriceTable({ price, exchangeRate }: CryptoPriceTableProps) {
     const isRise = price.change === "RISE";
     const isFall = price.change === "FALL";
     const isEven = price.change === "EVEN";
@@ -43,8 +44,8 @@ export function CryptoPriceTable({ price }: CryptoPriceTableProps) {
             <TableHeader>
                 <TableRow>
                     <TableHead className="text-right">코인명</TableHead>
-                    <TableHead className="text-right">마켓</TableHead>
-                    <TableHead className="text-right">현재가</TableHead>
+                    <TableHead className="text-right">현재가 (원화)</TableHead>
+                    <TableHead className="text-right">현재가 (달러)</TableHead>
                     <TableHead className="text-right">변동률</TableHead>
                     {hasAverageBuyPrice && <TableHead className="text-right">매수평균가</TableHead>}
                     {hasProfitLoss && <TableHead className="text-right">평가손익</TableHead>}
@@ -53,9 +54,11 @@ export function CryptoPriceTable({ price }: CryptoPriceTableProps) {
             <TableBody>
                 <TableRow>
                     <TableCell className="text-right font-medium">{price.name}</TableCell>
-                    <TableCell className="text-right">{price.market}</TableCell>
                     <TableCell className="text-right">
                         {formatPrice(price.price)}
+                    </TableCell>
+                    <TableCell className="text-right">
+                        {formatPriceUSD(convertKRWToUSD(price.price, exchangeRate))}
                     </TableCell>
                     <TableCell className="text-right">
                         <div className={cn("flex items-center justify-end gap-1", changeColorClass)}>

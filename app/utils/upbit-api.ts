@@ -224,4 +224,43 @@ export function formatTradePrice(price: number): string {
   return `${억.toFixed(2)}억원`;
 }
 
+/**
+ * 환율을 가져옵니다 (USD/KRW)
+ * 실제로는 환율 API를 사용하거나, 주기적으로 업데이트되는 값을 사용해야 합니다
+ * 여기서는 간단하게 고정 환율을 사용합니다 (실제로는 API에서 가져와야 함)
+ */
+export async function getExchangeRate(): Promise<number> {
+  try {
+    // 간단하게 고정 환율 사용 (실제로는 환율 API를 사용해야 함)
+    // 예: https://api.exchangerate-api.com/v4/latest/USD
+    const response = await fetch("https://api.exchangerate-api.com/v4/latest/USD");
+    if (response.ok) {
+      const data = await response.json();
+      return data.rates.KRW || 1300; // 기본값 1300원
+    }
+    return 1300; // 기본값
+  } catch (error) {
+    console.error("환율 조회 실패:", error);
+    return 1300; // 기본값
+  }
+}
+
+/**
+ * 한국 원화를 미국 달러로 변환합니다
+ */
+export function convertKRWToUSD(krw: number, exchangeRate: number): number {
+  return krw / exchangeRate;
+}
+
+/**
+ * 가격을 미국 달러 형식으로 포맷팅합니다
+ */
+export function formatPriceUSD(price: number): string {
+  return new Intl.NumberFormat("en-US", {
+    style: "currency",
+    currency: "USD",
+    maximumFractionDigits: 2,
+  }).format(price);
+}
+
 

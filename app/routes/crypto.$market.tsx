@@ -1,5 +1,5 @@
 import type { Route } from "./+types/crypto.$market";
-import { fetchCryptoPrices } from "~/utils/upbit-api";
+import { fetchCryptoPrices, getExchangeRate } from "~/utils/upbit-api";
 import { CRYPTO_MARKETS } from "~/constants";
 import { SidebarTrigger } from "~/components/ui/sidebar";
 import { CryptoPriceTable } from "~/components/crypto-price-table";
@@ -17,21 +17,26 @@ export function meta({ params }: Route.MetaArgs) {
 
 export async function loader({ params }: Route.LoaderArgs) {
     try {
-        const prices = await fetchCryptoPrices();
+        const [prices, exchangeRate] = await Promise.all([
+            fetchCryptoPrices(),
+            getExchangeRate().catch(() => 1300), // 기본값
+        ]);
         const marketPrice = prices.find((p) => p.market === params.market);
 
         if (!marketPrice) {
             return {
                 price: null,
+                exchangeRate: 1300,
                 error: "해당 코인 정보를 찾을 수 없습니다.",
             };
         }
 
-        return { price: marketPrice };
+        return { price: marketPrice, exchangeRate };
     } catch (error) {
         console.error("Failed to fetch crypto price:", error);
         return {
             price: null,
+            exchangeRate: 1300,
             error: "암호화폐 가격을 불러오는데 실패했습니다.",
         };
     }
@@ -89,7 +94,7 @@ export default function Crypto({ loaderData, params }: Route.ComponentProps) {
                 </h1>
             </div>
             <div className="max-w-6xl">
-                <CryptoPriceTable price={loaderData.price} />
+                <CryptoPriceTable price={loaderData.price} exchangeRate={loaderData.exchangeRate} />
             </div>
         </div>
     );
